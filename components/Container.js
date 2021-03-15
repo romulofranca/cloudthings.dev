@@ -68,8 +68,8 @@ export default function Container(props) {
               ? `/static/images/logo_nav_dark.png`
               : `/static/images/logo_nav.png`
           }
-          width={120}
-          height={32}
+          width={160}
+          height={36}
           layout={'fixed'}
           priority
         />
