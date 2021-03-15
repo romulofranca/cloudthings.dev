@@ -13,7 +13,7 @@ export default function NotFound() {
         <div className="flex flex-row">
           <div className="p-1">
             <Image
-              alt={`Heimdall`}
+              alt={`Bolt-1`}
               src={`/static/images/404/bolt-1.gif`}
               width={200}
               height={400}
@@ -22,7 +22,7 @@ export default function NotFound() {
           </div>
           <div className="p-1">
             <Image
-              alt={`Heimdall`}
+              alt={`Bolt-2`}
               src={`/static/images/404/bolt-2.gif`}
               width={200}
               height={400}
@@ -31,7 +31,7 @@ export default function NotFound() {
           </div>
           <div className="p-1">
             <Image
-              alt={`Heimdall`}
+              alt={`Bolt-3`}
               src={`/static/images/404/bolt-3.gif`}
               width={200}
               height={400}
