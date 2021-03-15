@@ -44,13 +44,13 @@ export default function BlogLayout({ children, frontMatter }) {
         <div className="mt-8">
         </div>
         <div className="text-sm text-gray-700 dark:text-gray-300">
-          {/* <a
+          <a
             href={discussUrl(frontMatter.slug)}
             target="_blank"
             rel="noopener noreferrer"
           >
             {'Discuss on Twitter'}
-          </a> */}
+          </a>
           {` • `}
           <a
             href={editUrl(frontMatter.slug)}
