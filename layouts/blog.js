@@ -6,10 +6,10 @@ import Container from '@/components/Container';
 
 const editUrl = (slug) =>
   `https://github.com/romulofranca/cloudthings.dev/edit/main/data/blog/${slug}.mdx`;
-// const discussUrl = (slug) =>
-//   `https://mobile.twitter.com/search?q=${encodeURIComponent(
-//     `https://cloudthings.dev/blog/${slug}`
-//   )}`;
+const discussUrl = (slug) =>
+  `https://mobile.twitter.com/search?q=${encodeURIComponent(
+    `https://cloudthings.dev/blog/${slug}`
+  )}`;
 
 export default function BlogLayout({ children, frontMatter }) {
   return (
