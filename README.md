@@ -4,7 +4,7 @@
 
 A blog about cloud computing, code, productivity and other things.
 
-*Inspired by Lee Robinson`s blog <https://leerob.io>* @leerob
+*Inspired by Lee Robinson`s blog <https://leerob.io>*
 
 ## Running Locally
 
