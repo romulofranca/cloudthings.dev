@@ -9,7 +9,12 @@ import Footer from '@/components/Footer';
 
 export default function Container(props) {
   const [mounted, setMounted] = useState(false);
+  const [active, setActive] = useState(false);
   const { theme, setTheme } = useTheme();
+
+  const handleClick = () => {
+    setActive(!active);
+  };
 
   useEffect(() => setMounted(true), []);
 
@@ -52,7 +57,7 @@ export default function Container(props) {
           <meta property="article:published_time" content={meta.date} />
         )}
       </Head>
-      <nav className="sticky-nav flex justify-between items-center max-w-4xl w-full p-8 my-0 md:my-8 mx-auto bg-white dark:bg-black bg-opacity-60">
+      <nav className="sticky-nav flex justify-between flex-wrap items-center max-w-4xl w-full p-8 my-0 md:my-8 mx-auto bg-white dark:bg-black bg-opacity-60">
         <a href="#skip" className="sr-only focus:not-sr-only">
           Skip to content
         </a>
@@ -68,22 +73,47 @@ export default function Container(props) {
           layout={'fixed'}
           priority
         />
-        <div className="justify-items-end">
-          <NextLink href="/">
-            <a className="p-1 sm:p-4 text-gray-900 dark:text-gray-100 self-end">
-              Home
-            </a>
-          </NextLink>
-          <NextLink href="/snippets">
-            <a className="p-1 sm:p-4 text-gray-900 dark:text-gray-100 self-end">
-              Snippets
-            </a>
-          </NextLink>
-          <NextLink href="/about">
-            <a className="p-1 sm:p-4 text-gray-900 dark:text-gray-100 self-end">
-              About
-            </a>
-          </NextLink>
+        <button
+          className=" inline-flex p-2 mr-2 hover:bg-gray-200 dark:hover:bg-gray-800 dark:text-white rounded text-black lg:hidden ml-auto hover:text-black outline-none focus:outline-none"
+          onClick={handleClick}
+        >
+          <svg
+            className="w-6 h-6"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M4 6h16M4 12h16M4 18h16"
+            />
+          </svg>
+        </button>
+        <div
+          className={`${
+            active ? '' : 'hidden'
+          } w-full lg:inline-flex lg:flex-grow lg:w-auto pr-2`}
+        >
+          <div className="lg:inline-flex lg:flex-row lg:ml-auto lg:w-auto w-full lg:items-center items-start  flex flex-col lg:h-auto">
+            <NextLink href="/">
+              <a className="lg:inline-flex lg:w-auto w-full px-2 py-2 rounded text-white font-bold items-center justify-center hover:bg-gray-200 hover:text-black sm:p-4 text-gray-900 dark:text-gray-100 dark:hover:bg-gray-800 self-end">
+                Home
+              </a>
+            </NextLink>
+            <NextLink href="/snippets">
+              <a className="lg:inline-flex lg:w-auto w-full px-2 py-2 rounded text-white font-bold items-center justify-center hover:bg-gray-200 hover:text-black p-1 sm:p-4 text-gray-900 dark:text-gray-100 dark:hover:bg-gray-800 self-end">
+                Snippets
+              </a>
+            </NextLink>
+            <NextLink href="/about">
+              <a className="lg:inline-flex lg:w-auto w-full px-2 py-2 rounded text-white font-bold items-center justify-center hover:bg-gray-200 hover:text-black p-1 sm:p-4 text-gray-900 dark:text-gray-100 dark:hover:bg-gray-800 self-end">
+                About
+              </a>
+            </NextLink>
+          </div>
         </div>
         <button
           aria-label="Toggle Dark Mode"
