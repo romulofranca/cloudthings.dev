@@ -1,0 +1,309 @@
+---
+title: 'Creating policies in Kubernetes using OPA Gatekeeper'
+publishedAt: '2021-03-16'
+summary: 'Writing policies to enforce compliance using OPA'
+image: '/static/images/opa-gateekeper-create-policies-k8s/heimdall.jpeg'
+imageAlt: 'Heimdall'
+---
+
+<Image
+  alt={`Heimdall`}
+  src={`/static/images/opa-gateekeper-create-policies-k8s/heimdall.jpeg`}
+  width={1200}
+  height={600}
+  priority
+/>
+
+## **Introduction** 📝
+
+This post is based in a PoC 
+
+This proof of concept (PoC) came from the need to keep our K8s clusters in compliance with some security policies that apply to the platform runtime. Because of this, we decided to do it using the open policy agent (OPA) which is an open source policy engine, maintained by CNCF and well used for this type of need.
+
+### **Why do we use OPA Gatekeeper?** 🤔
+
+OPA Gatekeeper is basically the implementation of OPA as an `admission controller` in Kubernetes. This makes it easier to create, implement and manage new policies in the cluster, using CRDs to do this. Some benefits when using Gatekeeper:
+
+- An extensible, parameterized policy library
+- Native Kubernetes CRDs for instantiating the policy library (aka "constraints")
+- Native Kubernetes CRDs for extending the policy library (aka "constraint templates")
+- Audit functionality
+
+<Image
+  alt={`Admission flow`}
+  src={`/static/images/opa-gateekeper-create-policies-k8s/kubernetes-admission-flow.png`}
+  width={1200}
+  height={630}
+  priority
+/>
+
+For more details, see <https://open-policy-agent.github.io/gatekeeper/website/docs/>
+
+### **Tools used** 🧰
+
+- [konstraint](<https://github.com/plexsystems/konstraint>) - Tool to generate constraint artifacts;
+- [conftest](<https://github.com/open-policy-agent/conftest>) - Tool to test the policies locally or used in CI/CD for validate k8s manifests based in policies;
+- [rego playground](<https://play.openpolicyagent.org/>) - Online tool to test policies sintax;
+
+## **Goals** 🥇
+
+- [x] Up and running OPA Gatekeeper
+- [x] Create a policy that validates and enforces that all apps have AWS Assume Role annotations
+- [x] Create a policy that validates and enforces that all apps have Vault annotations
+- [x] Create a policy that validates and enforces that all apps no longer use secretKeyRef as envVars
+- [x] Test the policies
+
+## **Steps** 🚶
+
+### **1 - Deploy the OPA Gatekeeper in K8s Cluster** ⛵
+
+To deploy the OPA Gatekeeper in the k8s cluster, we used the official helm chart <https://open-policy-agent.github.io/gatekeeper/charts>
+
+#### **Installation**
+
+```bash
+helm repo add gatekeeper https://open-policy-agent.github.io/gatekeeper/charts
+helm install gatekeeper/gatekeeper --generate-name
+```
+
+#### **Check the status of resources**
+
+```bash
+kubectl get all -n gatekeeper-system
+
+NAME                                                 READY   STATUS    RESTARTS   AGE
+pod/gatekeeper-audit-7f8859cd96-wdw9l                1/1     Running   0          34s
+pod/gatekeeper-controller-manager-7f6dc5ccff-cr5xm   1/1     Running   0          34s
+pod/gatekeeper-controller-manager-7f6dc5ccff-p9xv7   1/1     Running   0          34s
+pod/gatekeeper-controller-manager-7f6dc5ccff-vcx8v   1/1     Running   0          34s
+
+NAME                                 TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)   AGE
+service/gatekeeper-webhook-service   ClusterIP   10.96.248.144   <none>        443/TCP   34s
+
+NAME                                            READY   UP-TO-DATE   AVAILABLE   AGE
+deployment.apps/gatekeeper-audit                1/1     1            1           34s
+deployment.apps/gatekeeper-controller-manager   3/3     3            3           34s
+
+NAME                                                       DESIRED   CURRENT   READY   AGE
+replicaset.apps/gatekeeper-audit-7f8859cd96                1         1         1       34s
+replicaset.apps/gatekeeper-controller-manager-7f6dc5ccff   3         3         3       34s
+```
+
+### **2 - Create the policies** 👮
+
+To create the policies, we use the OPA policy language, called [rego](https://www.openpolicyagent.org/docs/latest/policy-language/>).
+
+Policy example:
+
+```go
+package main
+
+policyID := "P0002"
+
+annotations := ["eks.amazonaws.com/role-arn","external-role.cloudthings.com/iam-oidc-role"]
+
+violation[{"msg":msg, "details":{"missing_annotations": missing}}] {
+    provided := {annotation | input.review.object.metadata.annotations[annotation]}
+    required := {annotation | annotation := annotations[_]}
+    missing := required - provided
+    count(missing) > 0
+    msg := sprintf("You must provide ASSUME ROLE annotations for the service account: %v. For more details, visit https://github.com/cloudthings/poc-opa-gatekeeper/blob/master/policies/policies.md#%v", [missing, policyID])
+}
+
+violation[{"msg":msg}] {
+    serviceAccountName := input.review.object.metadata.name
+    annotations := input.review.object.metadata.annotations[annotation]
+    values := regex.match(serviceAccountName,annotations)
+    not values == true
+    msg := sprintf("Check the values of the annotations, they must be the same as the name of the service account. For more details, visit https://github.com/cloudthings/poc-opa-gatekeeper/blob/master/policies/policies.md#%v", [policyID])
+}
+
+```
+
+We created the policies with the following pattern:
+
+```bash
+<policy-id>-<policy-type>-<validate>-<resource-kind>
+```
+
+- **policy-id**: a sequential id, used to identify the policy
+- **policy-type**: type of policy, example: `allow | deny | required`
+- **validate**: a short name for what will be validated in the policy
+- **resource-kind**: type of resource what will be validated in the policy: `sa | deployment | pod | service`
+
+Policy path tree:
+
+```bash
+policies/P0002-required-assume-role-annotations-sa
+├── artifacts
+│   ├── constraint_P0002RequiredAssumeRoleAnnotationsSa.yaml
+│   └── template_P0002RequiredAssumeRoleAnnotationsSa.yaml
+├── inputs
+│   ├── sa_allowed.json
+│   ├── sa_without_annotations_disallowed.json
+│   └── sa_wrong_annotations_disallowed.json
+├── policy.rego
+└── samples
+    ├── sa_allowed.yaml
+    ├── sa_without_annotations_disallowed.yaml
+    └── sa_wrong_annotations_disallowed.yaml
+```
+
+- **policy.rego**: the main file, where we write the policy.
+- **inputs**: JSON objects created from the payload generated when a resource manifest is applied to the cluster. Only used for local testing with the `conftest` tool. see more details in step 4.
+- **samples**: resource manifests used for testing policy after creating and applying the artifacts in the cluster.
+- **artifacts**: CRDs artifacts generated by `konstraint` tool, see more details in step 3
+
+### **3 - Generate the artifacts (Constraints and Templates)** 💎
+
+We use konstraint to generate the artifacts manifests. It is a simple tool that automates the process of creating the necessary manifests to be used by the gatekeeper's admission controller.
+
+To generate new artifacts, run the following command:
+
+```bash
+cd policies
+konstraint create P0002-required-assume-role-annotations-sa -o P0002-required-assume-role-annotations-sa/artifacts
+```
+
+The tool generate two artifacts:
+
+- **template_*.yaml**: Constraint Templates allow people to declare new constraints. They can provide the expected input parameters and the underlying Rego necessary to enforce their intent. For example:
+
+```yaml
+apiVersion: templates.gatekeeper.sh/v1beta1
+kind: ConstraintTemplate
+metadata:
+  creationTimestamp: null
+  name: p0002requiredassumeroleannotationssa
+spec:
+  crd:
+    spec:
+      names:
+        kind: P0002RequiredAssumeRoleAnnotationsSa
+  targets:
+  - rego: |-
+      package main
+
+      policyID := "P0002"
+
+      annotations := ["eks.amazonaws.com/role-arn","external-role.cloudthings.com/iam-oidc-role"]
+
+      violation[{"msg":msg, "details":{"missing_annotations": missing}}] {
+          provided := {annotation | input.review.object.metadata.annotations[annotation]}
+          required := {annotation | annotation := annotations[_]}
+          missing := required - provided
+          count(missing) > 0
+          msg := sprintf("You must provide ASSUME ROLE annotations for the service account: %v. For more details, visit https://github.com/cloudthings/poc-opa-gatekeeper/blob/master/policies/policies.md#%v", [missing, policyID])
+      }
+
+      violation[{"msg":msg}] {
+          serviceAccountName := input.review.object.metadata.name
+          annotations := input.review.object.metadata.annotations[annotation]
+          values := regex.match(serviceAccountName,annotations)
+          not values == true
+          msg := sprintf("Check the values of the annotations, they must be the same as the name of the service account. For more details, visit https://github.com/cloudthings/poc-opa-gatekeeper/blob/master/policies/policies.md#%v", [policyID])
+      }
+    target: admission.k8s.gatekeeper.sh
+status: {}
+```
+
+- **constraint_*.yaml**: A constraint is a declaration that its author wants a system to meet a given set of requirements. For example:
+
+```yaml
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: P0002RequiredAssumeRoleAnnotationsSa
+metadata:
+  name: p0002requiredassumeroleannotationssa
+spec:
+  match:
+    kinds:
+    - apiGroups:
+      - ""
+      kinds:
+      - ServiceAccount
+```
+
+To apply the manifests generated in the cluster, run:
+
+```bash
+kubectl apply -f P0002-required-assume-role-annotations-sa/artifacts/
+
+p0002requiredassumeroleannotationssa.constraints.gatekeeper.sh/p0002requiredassumeroleannotationssa created
+constrainttemplate.templates.gatekeeper.sh/p0002requiredassumeroleannotationssa unchanged    
+```
+
+```bash
+kubectl get constrainttemplate,P0002RequiredAssumeRoleAnnotationsSa
+
+NAME                                                                              AGE
+constrainttemplate.templates.gatekeeper.sh/p0002requiredassumeroleannotationssa   4m5s
+
+NAME                                                                                                  AGE
+p0002requiredassumeroleannotationssa.constraints.gatekeeper.sh/p0002requiredassumeroleannotationssa   3m59s
+```
+
+### **4 - Test the policies** 🚔
+
+#### Test local
+
+To test locally, you will need to use the conftest tool, and use the files in the `inputs` folder as input for testing:
+
+```bash
+conftest test -otable --policy P0002-required-assume-role-annotations-sa P0002-required-assume-role-annotations-sa/inputs
+```
+
+<Image
+  alt={`Result Conftest`}
+  src={`/static/images/opa-gateekeper-create-policies-k8s/result-conftest.png`}
+  width={1207}
+  height={192}
+  priority
+/>
+
+#### Test in the cluster
+
+To test directly in the cluster, use the manifests in the samples folder of the policies:
+
+- **sa_without_annotations_disallowed**
+
+```bash
+kubectl apply -f P0002-required-assume-role-annotations-sa/samples/sa_without_annotations_disallowed.yaml
+
+Output:
+
+Error from server ([denied by p0002requiredassumeroleannotationssa] You must provide ASSUME ROLE annotations for the service account: {"eks.amazonaws.com/role-arn", "external-role.cloudthings.com/iam-oidc-role"}. For more details, visit https://github.com/cloudthings/poc-opa-gatekeeper/blob/master/policies/policies.md#P0002): error when creating "P0002-required-assume-role-annotations-sa/samples/sa_without_annotations_disallowed.yaml": admission webhook "validation.gatekeeper.sh" denied the request: [denied by p0002requiredassumeroleannotationssa] You must provide ASSUME ROLE annotations for the service account: {"eks.amazonaws.com/role-arn", "external-role.cloudthings.com/iam-oidc-role"}. For more details, visit https://github.com/cloudthings/poc-opa-gatekeeper/blob/master/policies/policies.md#P0002
+```
+
+- **sa_wrong_annotations_disallowed**:
+
+```bash
+kubectl apply -f P0002-required-assume-role-annotations-sa/samples/sa_wrong_annotations_disallowed.yaml
+
+Output:
+
+Error from server ([denied by p0002requiredassumeroleannotationssa] You must provide ASSUME ROLE annotations for the service account: {"external-role.cloudthings.com/iam-oidc-role"}. For more details, visit https://github.com/cloudthings/poc-opa-gatekeeper/blob/master/policies/policies.md#P0002
+[denied by p0002requiredassumeroleannotationssa] Check the values of the annotations, they must be the same as the name of the service account. For more details, visit https://github.com/cloudthings/poc-opa-gatekeeper/blob/master/policies/policies.md#P0002): error when creating "P0002-required-assume-role-annotations-sa/samples/sa_wrong_annotations_disallowed.yaml": admission webhook "validation.gatekeeper.sh" denied the request: [denied by p0002requiredassumeroleannotationssa] You must provide ASSUME ROLE annotations for the service account: {"external-role.cloudthings.com/iam-oidc-role"}. For more details, visit https://github.com/cloudthings/poc-opa-gatekeeper/blob/master/policies/policies.md#P0002
+[denied by p0002requiredassumeroleannotationssa] Check the values of the annotations, they must be the same as the name of the service account. For more details, visit https://github.com/cloudthings/poc-opa-gatekeeper/blob/master/policies/policies.md#P0002
+```
+
+- **sa_allowed**
+
+```bash
+kubectl apply -f P0002-required-assume-role-annotations-sa/samples/sa_allowed.yaml 
+
+Output:
+serviceaccount/external-dns created
+```
+
+## **Conclusion** 🎱
+
+We concluded that the OPA Gatekeeper meets our demand, both for specific policies such as checking annotations for using the vault or assumeRole, as well as for more general policies.
+
+## **Next steps** 🚀
+
+- [ ] Study more policies to use in our environment
+- [ ] Create a session to explain how to create inputs to local test
+- [ ] Test OPA Gatekeeper more broadly, applying to the staging cluster and excluding only specific namespaces
+- [ ] Create a pipeline to deploy the OPA Gatekeeper infrastructure
+- [ ] Create a pipeline to deploy the policies
+- [ ] Add validation in apps pipelines with conftest
