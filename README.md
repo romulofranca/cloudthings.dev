@@ -1,6 +1,6 @@
 # cloudthings.dev
 
-![cloud things](public/static/images/logo.png)
+![cloud things](public/static/images/Logo.png)
 
 A blog about cloud computing, code, productivity and other things.
 
