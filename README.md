@@ -2,7 +2,7 @@
 
 ![cloud things](public/static/images/Logo.png)
 
-A blog about cloud computing, code, productivity and other things.
+A blog about cloud, code, infra, productivity and other things.
 
 *Inspired by Lee Robinson`s blog <https://leerob.io>*
 
