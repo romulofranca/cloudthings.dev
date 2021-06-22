@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?><rss xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:atom="http://www.w3.org/2005/Atom" version="2.0">
+    <channel>
+        <title><![CDATA[CloudThings]]></title>
+        <description><![CDATA[CloudThings]]></description>
+        <link>https://cloudthings.dev</link>
+        <generator>RSS for Node</generator>
+        <lastBuildDate>Tue, 22 Jun 2021 14:31:15 GMT</lastBuildDate>
+        <atom:link href="https://cloudthings.dev/feed.xml" rel="self" type="application/rss+xml"/>
+        <item>
+            <title><![CDATA[Creating policies in Kubernetes using OPA Gatekeeper]]></title>
+            <description><![CDATA[Writing policies to enforce compliance using OPA]]></description>
+            <link>https://cloudthings.dev/blog/opa-gatekeeper-create-policies-k8s</link>
+            <guid isPermaLink="true">https://cloudthings.dev/blog/opa-gatekeeper-create-policies-k8s</guid>
+            <pubDate>Tue, 16 Mar 2021 00:00:00 GMT</pubDate>
+        </item>
+    </channel>
+</rss>
