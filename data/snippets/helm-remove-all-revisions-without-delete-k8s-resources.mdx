@@ -1,0 +1,23 @@
+---
+title: 'Helm - Remove helm revisions without delete the kubernetes resources'
+description: 'Remove all helm release revisions from a file without delete the kubernetes resources'
+logo: 'helm.png'
+---
+
+```bash
+#!/bin/bash
+
+set -ex
+
+FILE_PATH=./helm-releases
+HELM_RELEASES_NAMESPACE=kube-system
+
+remove_revisions() {
+  mapfile -t releases < $FILE_PATH
+  for revision in "${releases[@]}"
+    do
+      echo $release
+      kubectl get cm -n $HELM_RELEASES_NAMESPACE --no-headers | awk '{ print $1 }' | grep $revision | xargs kubectl -n $HELM_RELEASES_NAMESPACE delete cm || true
+    done
+}
+```
