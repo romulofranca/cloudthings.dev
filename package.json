@@ -5,7 +5,7 @@
   "main": "index.js",
   "repository": "git@github.com:romulofranca/cloudthings.dev.git",
   "author": {
-    "name": "Romulo Franca", 
+    "name": "Romulo Franca",
     "email": "romulo@cloudthings.dev",
     "url": "https://cloudthings.dev"
   },
@@ -33,7 +33,7 @@
     "mdx-prism": "0.3.3",
     "micro-cookie-session": "^2.0.0-beta.1",
     "next": "10.0.8",
-    "next-mdx-remote": "^2.1.3",
+    "next-mdx-remote": "^3.0.2",
     "next-themes": "^0.0.12",
     "postcss": "^8.2.7",
     "preact": "^10.5.12",
@@ -67,4 +67,3 @@
     "trailingComma": "none"
   }
 }
-
