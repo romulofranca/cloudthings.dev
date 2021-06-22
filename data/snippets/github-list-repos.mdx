@@ -1,0 +1,44 @@
+---
+title: 'Github'
+description: 'Script to list with filter organization repos using NodeJs'
+logo: 'github.png'
+---
+
+```js
+"use strict";
+
+import { Octokit } from "@octokit/core";
+
+const token = "<YOUR_PERSONAL_TOKEN>";
+const octokit = new Octokit({ auth: token });
+
+//don't pass endCursor, this argument is used by recursion
+async function listGithubRepos(filter, endCursor = 0) {
+  const query = `query ($login: String!) {
+      organization(login: $login) {
+        repositories(privacy: PRIVATE, ${
+          endCursor ? `after: "${endCursor}",` : ``
+        } orderBy:{field:NAME, direction: ASC}, first:100) {
+          nodes{
+            name
+          }
+          pageInfo {
+            hasNextPage
+            endCursor
+          }
+        }
+      }
+    }`;
+
+  const res = await octokit.graphql(query, { login: <your_org> });
+  res.organization.repositories.nodes.map((val) => {
+    if (val.name.includes(filter)) {
+      console.log(val.name);
+    }
+  });
+
+  if (res.organization.repositories.pageInfo.hasNextPage) {
+    listGithubRepos(filter,res.organization.repositories.pageInfo.endCursor);
+  }
+}
+```
