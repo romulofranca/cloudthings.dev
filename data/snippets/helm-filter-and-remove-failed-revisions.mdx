@@ -1,0 +1,69 @@
+---
+title: 'Helm'
+description: 'Remove failed helm release revisions from a file'
+logo: 'helm.png'
+---
+
+
+```bash
+#!/bin/bash
+
+set -ex
+
+FAILED_RELEASES_FILE_PATH=./tmp/failed_releases.txt
+DEPLOYED_RELEASES_FILE_PATH=./tmp/helm_deployed_releases.txt
+
+# Use the helm list command to fecth all releases with failed revisions and save to a file
+fetch_failed_releases() {
+  rm ./tmp/*.txt
+  mkdir -p tmp
+  failed_releases=$(helm list --failed | awk '{print $1}' | tail -n +2)
+  echo $failed_releases > $FAILED_RELEASES_FILE_PATH
+};
+
+# Filter releases with the latest failed revision and generate a report
+filter_latest_failed_revision() {
+  mkdir -p reports
+  IFS=' ' read -r -a releases < $FAILED_RELEASES_FILE_PATH
+  current_time=$(date "+%Y%m%d%H%M%S")
+
+  for release in "${releases[@]}"
+    do
+      latest_release=$(helm history  --col-width 500 $release | tail -1)
+      status=$(echo $latest_release | awk '{print $7}')
+      echo "$release | $status"
+
+      if [ $status == "FAILED" ]
+      then
+        echo $release $latest_release >> ./reports/helm_failed_releases_$current_time.txt
+      else
+        echo $release >> $DEPLOYED_RELEASES_FILE_PATH
+      fi
+    done
+}
+
+# remove all failed revisions from a list of releases
+remove_failed_revisions() {
+  mapfile -t deployed_releases < $DEPLOYED_RELEASES_FILE_PATH
+  for deploy in "${deployed_releases[@]}"
+    do
+      mapfile -t deployed_history <<< $(helm history $deploy | tail -n +2)
+      for history in "${deployed_history[@]}"
+        do
+          status=$(echo $history | awk '{print $7}')
+          if [ $status == "FAILED" ]
+          then
+            revision=$(echo $history | awk '{print $1}')
+            echo "$deploy.v$revision revision deleted"
+            kubectl delete cm $deploy.v$revision -nkube-system
+          fi
+        done
+    done
+}
+
+##--------------------MAIN--------------------##
+
+# fetch_failed_releases
+# filter_latest_failed_revision
+# remove_failed_revisions
+```
