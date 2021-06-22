@@ -1,0 +1,12 @@
+---
+title: 'Jenkins'
+description: 'Remove all helm release revisions from a file without delete the kubernetes resources'
+logo: 'jenkins.png'
+---
+
+```groovy
+import hudson.model.*
+import jenkins.model.Jenkins
+def q = Jenkins.instance.queue
+q.items.findAll { it.task.name.startsWith('') }.each { q.cancel(it.task) }
+```
